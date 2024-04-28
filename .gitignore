@@ -1,0 +1,17 @@
+*.pyc
+.vscode
+
+*dataset*
+
+json
+csv
+npy
+graph
+model
+log
+pcap
+flow
+bytes
+
+tmp*.*
+test*.*

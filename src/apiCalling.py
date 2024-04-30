@@ -32,7 +32,7 @@ class APICalling:
         url="http://localhost:8090/tasks/report/",
     ):
         """
-        Get report and save as json file
+        Check if the analysis is done.
         """
         # GET
         try:

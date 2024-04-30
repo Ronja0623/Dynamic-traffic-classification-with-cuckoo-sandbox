@@ -138,7 +138,7 @@ class DataProcessor:
         """
         return len(os.listdir(self.dataset_dir))
 
-    def load_data(self, batch_size, model_image_size):
+    def get_data_loader(self, batch_size, model_image_size):
         """
         Load the dataset into PyTorch DataLoader.
         """

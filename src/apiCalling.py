@@ -49,8 +49,6 @@ class APICalling:
     def clear_report_log(self, check_range, url="http://localhost:8090/tasks/delete/"):
         """
         Clear all report log after processing.
-
-        # TODO: Wait to fix, cannot delete log now.
         """
         clear_count = 0
         if check_range < 1:

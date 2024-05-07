@@ -1,11 +1,8 @@
 import os
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from tqdm import tqdm
 import numpy as np
-from scipy.linalg import hadamard
 import syft as sy
 import multiprocessing as mp
 
@@ -232,14 +229,21 @@ class FederatedModelTrainer(ModelTrainer):
                     all_preds.extend(preds.cpu().numpy())
                     all_labels.extend(labels.cpu().numpy())
                     progress_bar.update(1)
-                    progress_bar.set_postfix(loss=loss.item())
+                    progress_bar.set_postfix(loss=loss.item(), client=client + 1, batch=batch_idx + 1)
 
             progress_bar.close()
 
             if self.use_differential_privacy and z_agg is not None:
                 result = self.secure_aggregate_server_side(z_agg)
                 state_dict = dict(zip(self.model.state_dict().keys(), result))
-                self.model.load_state_dict(state_dict)
+                
+                # Fix: Adjust mismatched layers by ensuring same shape
+                current_state_dict = self.model.state_dict()
+                for key, param in state_dict.items():
+                    if param.shape == current_state_dict[key].shape:
+                        current_state_dict[key] = param
+
+                self.model.load_state_dict(current_state_dict)
 
             # Save the model
             model_path = os.path.join(model_dir, f"model_epoch{epoch + 1}.pth")

@@ -12,7 +12,7 @@ if __name__ == '__main__':
     FLOW_DIR = "flow"
     BYTES_DIR = "bytes"
     GRAPH_DIR = "graph"
-    FLOW_DATASET_DIR = r"D:\Backup\Dataset\Flow\flow_dataset"
+    FLOW_DATASET_DIR = r"D:\Backup\Dataset\Flow\flow_dataset - tmp"
     # output path: malware classification
     MODEL_DIR = "model"
     LOG_DIR = "log"
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     BATCH_SIZE = 32
     LEARNING_RATE = 1e-3
     TRAIN_RATIO = 0.8
-    EPOCHS = 1
+    EPOCHS = 100
     RANDOM_STATE = 42
 
     classifier = Classifier(
@@ -81,8 +81,8 @@ if __name__ == '__main__':
     data_processor = DataProcessor(FLOW_DATASET_DIR)
     num_classes = data_processor.get_num_classes()
     # model = EnhancedLeNet(num_classes)
-    model = BasicCNN(num_classes)
-    # model = CustomVGG16(num_classes)
+    # model = BasicCNN(num_classes)
+    model = CustomVGG16(num_classes)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_loader, val_loader, test_loader = data_processor.get_data_loader(
         BATCH_SIZE, model.image_size
@@ -97,7 +97,7 @@ if __name__ == '__main__':
         EPOCHS,
         num_clients=3,
         use_federated_learning=True,
-        use_differential_privacy=True
+        use_differential_privacy=False
     )
 
     model_trainer.train(train_loader, val_loader, model_path)

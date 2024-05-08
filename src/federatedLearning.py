@@ -4,6 +4,7 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 from tqdm import tqdm
 import numpy as np
 import syft as sy
+import tenseal as ts
 import multiprocessing as mp
 
 from model import ModelTrainer
@@ -41,8 +42,8 @@ class FederatedModelTrainer(ModelTrainer):
         learning_rate,
         epochs,
         num_clients=3,
-        use_federated_learning=True,
-        use_differential_privacy=True,
+        use_federated_learning=False,
+        use_differential_privacy=False,
         clipping_threshold=1.0,
         granularity=None,
         noise_scale=1.0,
@@ -60,8 +61,8 @@ class FederatedModelTrainer(ModelTrainer):
             learning_rate (float): The learning rate for the optimizer.
             epochs (int): The number of training epochs.
             num_clients (int, optional): The number of clients in federated learning. Defaults to 1.
-            use_federated_learning (bool, optional): Whether to use federated learning. Defaults to True.
-            use_differential_privacy (bool, optional): Whether to use differential privacy. Defaults to True.
+            use_federated_learning (bool, optional): Whether to use federated learning. Defaults to False.
+            use_differential_privacy (bool, optional): Whether to use differential privacy. Defaults to False.
             clipping_threshold (float, optional): The clipping threshold for differential privacy. Defaults to None.
             granularity (float, optional): The granularity for differential privacy. Defaults to None.
             noise_scale (float, optional): The scale of the Gaussian noise for differential privacy. Defaults to 1.0.

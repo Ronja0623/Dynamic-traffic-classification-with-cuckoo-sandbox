@@ -6,7 +6,7 @@ import torch
 from apiCalling import APICalling
 from dataDescriptionHandler import DataDescriptionHandler
 from federatedLearning import FederatedModelTrainer
-from homomorphicEncryption import FederatedModelTrainerHE
+# from homomorphicEncryption import FederatedModelTrainerHE
 from imageGenerator import ImageGenerator
 from model import (
     BasicCNN,

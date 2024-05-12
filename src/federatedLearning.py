@@ -1,11 +1,12 @@
+import multiprocessing as mp
 import os
-import torch
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from tqdm import tqdm
+
 import numpy as np
 import syft as sy
 import tenseal as ts
-import multiprocessing as mp
+import torch
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from tqdm import tqdm
 
 from model import ModelTrainer
 
@@ -86,7 +87,9 @@ class FederatedModelTrainer(ModelTrainer):
 
         # Federated learning setup
         if self.use_federated_learning:
-            self.domain = sy.orchestra.launch(name="test-domain-1", port="auto", dev_mode=True, reset=True)
+            self.domain = sy.orchestra.launch(
+                name="test-domain-1", port="auto", dev_mode=True, reset=True
+            )
             self.clients = [
                 self.domain.login(email=f"client{i+1}@test.com", password="changethis")
                 for i in range(self.num_clients)
@@ -108,9 +111,9 @@ class FederatedModelTrainer(ModelTrainer):
         context.global_scale = 2**40
         context.generate_galois_keys()
         self.context = context
-    
+
     def fwht(self, x):
-        """ Fast Walsh-Hadamard Transform. """
+        """Fast Walsh-Hadamard Transform."""
         h = 1
         while h < len(x):
             for i in range(0, len(x), h * 2):
@@ -140,8 +143,10 @@ class FederatedModelTrainer(ModelTrainer):
             )
 
             # Pad scaled_vector to the nearest power of two
-            next_power_of_two = int(2**np.ceil(np.log2(len(scaled_vector))))
-            scaled_vector = np.pad(scaled_vector, (0, next_power_of_two - len(scaled_vector)))
+            next_power_of_two = int(2 ** np.ceil(np.log2(len(scaled_vector))))
+            scaled_vector = np.pad(
+                scaled_vector, (0, next_power_of_two - len(scaled_vector))
+            )
 
             if self.rotation_type == "hd":
                 flattened_vector = self.fwht(scaled_vector)
@@ -179,7 +184,7 @@ class FederatedModelTrainer(ModelTrainer):
         context = ts.context(
             ts.SCHEME_TYPE.CKKS,
             poly_modulus_degree=8192,
-            coeff_mod_bit_sizes=[60, 40, 40, 60]
+            coeff_mod_bit_sizes=[60, 40, 40, 60],
         )
         context.global_scale = 2**40
         context.generate_galois_keys()
@@ -192,13 +197,15 @@ class FederatedModelTrainer(ModelTrainer):
         for param in params_list:
             if param.size < max_size:
                 # Pad with zeros
-                padded_param = np.pad(param, (0, max_size - param.size), 'constant', constant_values=0)
+                padded_param = np.pad(
+                    param, (0, max_size - param.size), "constant", constant_values=0
+                )
             else:
                 padded_param = param
             # Convert to CKKSVector and add to the list
             encrypted_vector = ts.ckks_vector(context, padded_param.tolist())
             encrypted_vectors.append(encrypted_vector)
-        
+
         return encrypted_vectors
 
     def secure_aggregate_server_side(self, aggregated_vectors):
@@ -241,9 +248,12 @@ class FederatedModelTrainer(ModelTrainer):
             data_per_client = len(train_loader.dataset) // self.num_clients
             train_loaders = [
                 torch.utils.data.DataLoader(
-                    torch.utils.data.Subset(train_loader.dataset, range(i * data_per_client, (i + 1) * data_per_client)),
+                    torch.utils.data.Subset(
+                        train_loader.dataset,
+                        range(i * data_per_client, (i + 1) * data_per_client),
+                    ),
                     batch_size=train_loader.batch_size,
-                    shuffle=True
+                    shuffle=True,
                 )
                 for i in range(self.num_clients)
             ]
@@ -257,7 +267,9 @@ class FederatedModelTrainer(ModelTrainer):
             z_agg = None
 
             total_batches = sum(len(loader) for loader in train_loaders)
-            progress_bar = tqdm(total=total_batches, desc=f"Epoch {epoch + 1}", leave=True)
+            progress_bar = tqdm(
+                total=total_batches, desc=f"Epoch {epoch + 1}", leave=True
+            )
 
             for client, client_train_loader in enumerate(train_loaders):
                 for batch_idx, (inputs, labels) in enumerate(client_train_loader):
@@ -270,25 +282,33 @@ class FederatedModelTrainer(ModelTrainer):
                     loss.backward()
 
                     if self.use_differential_privacy:
-                        dp_params = self.secure_aggregate_with_dp(self.model.parameters())
+                        dp_params = self.secure_aggregate_with_dp(
+                            self.model.parameters()
+                        )
                         if self.use_homomorphic_encryption:
                             # Encrypt the differentially private parameters
                             he_params = self.secure_aggregate_with_he(dp_params)
                             if z_agg is None:
                                 z_agg = he_params
                             else:
-                                z_agg = [he_agg + he for he_agg, he in zip(z_agg, he_params)]
+                                z_agg = [
+                                    he_agg + he for he_agg, he in zip(z_agg, he_params)
+                                ]
                         else:
                             if z_agg is None:
                                 z_agg = dp_params
                             else:
                                 z_agg = [za + dp for za, dp in zip(z_agg, dp_params)]
                     elif self.use_homomorphic_encryption:
-                        he_params = self.secure_aggregate_with_he(self.model.parameters())
+                        he_params = self.secure_aggregate_with_he(
+                            self.model.parameters()
+                        )
                         if z_agg is None:
                             z_agg = he_params
                         else:
-                            z_agg = [he_agg + he for he_agg, he in zip(z_agg, he_params)]
+                            z_agg = [
+                                he_agg + he for he_agg, he in zip(z_agg, he_params)
+                            ]
                     else:
                         self.optimizer.step()
 
@@ -297,7 +317,9 @@ class FederatedModelTrainer(ModelTrainer):
                     all_preds.extend(preds.cpu().numpy())
                     all_labels.extend(labels.cpu().numpy())
                     progress_bar.update(1)
-                    progress_bar.set_postfix(loss=loss.item(), client=client + 1, batch=batch_idx + 1)
+                    progress_bar.set_postfix(
+                        loss=loss.item(), client=client + 1, batch=batch_idx + 1
+                    )
 
             progress_bar.close()
 
@@ -306,14 +328,16 @@ class FederatedModelTrainer(ModelTrainer):
                 # Assuming decryption and aggregation are required
                 if self.use_homomorphic_encryption:
                     # Decrypt the results before updating model parameters
-                    decrypted_results = [self.decrypt_aggregated_updates(vec) for vec in z_agg]
+                    decrypted_results = [
+                        self.decrypt_aggregated_updates(vec) for vec in z_agg
+                    ]
                     result = decrypted_results
                 else:
                     result = z_agg
 
                 # Fix mismatched layers by ensuring the same shape
                 state_dict = dict(zip(self.model.state_dict().keys(), result))
-                
+
                 # Fix: Adjust mismatched layers by ensuring same shape
                 current_state_dict = self.model.state_dict()
                 for key, param in state_dict.items():
@@ -328,10 +352,22 @@ class FederatedModelTrainer(ModelTrainer):
 
             # Calculate training metrics
             train_accuracy = accuracy_score(all_labels, all_preds)
-            train_precision = precision_score(all_labels, all_preds, average="macro", zero_division=0)
-            train_recall = recall_score(all_labels, all_preds, average="macro", zero_division=0)
+            train_precision = precision_score(
+                all_labels, all_preds, average="macro", zero_division=0
+            )
+            train_recall = recall_score(
+                all_labels, all_preds, average="macro", zero_division=0
+            )
             train_f1 = f1_score(all_labels, all_preds, average="macro", zero_division=0)
             average_loss = sum(train_losses) / len(train_losses)
-            self.metrics_manager.record_metrics(epoch + 1, average_loss, train_accuracy, train_precision, train_recall, train_f1, "train")
+            self.metrics_manager.record_metrics(
+                epoch + 1,
+                average_loss,
+                train_accuracy,
+                train_precision,
+                train_recall,
+                train_f1,
+                "train",
+            )
 
             self.evaluate(val_loader, epoch)

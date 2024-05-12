@@ -1,5 +1,6 @@
 from classifier import Classifier
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     """
     Set the parameters
     """
@@ -32,6 +33,8 @@ if __name__ == '__main__':
     TRAIN_RATIO = 0.8
     EPOCHS = 1
     RANDOM_STATE = 42
+    # Federated Learning
+    NUM_CLIENTS = 3
 
     classifier = Classifier(
         MALWARE_DATASET_DIR,
@@ -61,53 +64,9 @@ if __name__ == '__main__':
     # classifier.load_traffic_data()
     # classifier.train_model()
     # classifier.train_federated_model(num_clients=2)
-    #### tmp
-    from model import DataProcessor, LogManager, BasicCNN, EnhancedLeNet, CustomVGG16
-    import os
-    import time
-    import torch
-    from federatedLearning import FederatedModelTrainer
-
-    # Set the path
-    timestamp = time.strftime("%Y%m%d_%H%M", time.localtime())
-    model_path = os.path.join(MODEL_DIR, timestamp)
-    os.makedirs(model_path, exist_ok=True)
-    metrics_path = os.path.join(LOG_DIR, f"metrics_{timestamp}.csv")
-    model_description_path = os.path.join(
-        LOG_DIR, f"model_description_{timestamp}.txt"
-    )
-
-    # Set the model
-    data_processor = DataProcessor(FLOW_DATASET_DIR)
-    num_classes = data_processor.get_num_classes()
-    # model = EnhancedLeNet(num_classes)
-    model = BasicCNN(num_classes)
-    # model = CustomVGG16(num_classes)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_loader, val_loader, test_loader = data_processor.get_data_loader(
-        BATCH_SIZE, model.image_size
-    )
-
-    log_manager = LogManager()
-    model_trainer = FederatedModelTrainer(
-        model,
-        log_manager,
-        device,
-        LEARNING_RATE,
-        EPOCHS,
-        num_clients=3,
+    classifier.train_federated_model(
+        num_clients=NUM_CLIENTS,
         use_federated_learning=True,
         use_differential_privacy=False,
-        use_homomorphic_encryption=True
-    )
-
-    model_trainer.train(train_loader, val_loader, model_path)
-    model_trainer.test(test_loader)
-    log_manager.save_metrics(metrics_path)
-    log_manager.save_model_description(
-        model_description_path,
-        model,
-        BATCH_SIZE,
-        LEARNING_RATE,
-        EPOCHS,
+        use_homomorphic_encryption=False,
     )

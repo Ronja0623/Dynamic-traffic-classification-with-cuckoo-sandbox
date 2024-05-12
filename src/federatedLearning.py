@@ -44,6 +44,7 @@ class FederatedModelTrainer(ModelTrainer):
         num_clients=3,
         use_federated_learning=False,
         use_differential_privacy=False,
+        use_homomorphic_encryption=False,
         clipping_threshold=1.0,
         granularity=None,
         noise_scale=1.0,
@@ -63,6 +64,7 @@ class FederatedModelTrainer(ModelTrainer):
             num_clients (int, optional): The number of clients in federated learning. Defaults to 1.
             use_federated_learning (bool, optional): Whether to use federated learning. Defaults to False.
             use_differential_privacy (bool, optional): Whether to use differential privacy. Defaults to False.
+            use_homomorphic_encryption (bool, optional): Whether to use homomorphic encryption. Defaults to False.
             clipping_threshold (float, optional): The clipping threshold for differential privacy. Defaults to None.
             granularity (float, optional): The granularity for differential privacy. Defaults to None.
             noise_scale (float, optional): The scale of the Gaussian noise for differential privacy. Defaults to 1.0.
@@ -74,22 +76,39 @@ class FederatedModelTrainer(ModelTrainer):
         self.num_clients = num_clients
         self.use_federated_learning = use_federated_learning
         self.use_differential_privacy = use_differential_privacy
+        self.use_homomorphic_encryption = use_homomorphic_encryption
         self.clipping_threshold = clipping_threshold
-        self.granularity = granularity or 1.0  # Set default granularity to 1.0
+        self.granularity = granularity or 1.0  # Default granularity
         self.noise_scale = noise_scale
         self.rotation_type = rotation_type
-        self.modulus = modulus or 2**10  # Use a default power of two for modulus
+        self.modulus = modulus or 2**10  # Default modulus
         self.zeroing = zeroing
 
+        # Federated learning setup
         if self.use_federated_learning:
             self.domain = sy.orchestra.launch(name="test-domain-1", port="auto", dev_mode=True, reset=True)
             self.clients = [
                 self.domain.login(email=f"client{i+1}@test.com", password="changethis")
                 for i in range(self.num_clients)
             ]
-        else:
-            self.clients = None
 
+        # Homomorphic encryption setup
+        if self.use_homomorphic_encryption:
+            self.setup_homomorphic_encryption()
+
+    def setup_homomorphic_encryption(self):
+        """
+        Sets up the homomorphic encryption context for secure aggregation.
+        """
+        context = ts.Context(
+            ts.SCHEME_TYPE.CKKS,
+            poly_modulus_degree=8192,
+            coeff_mod_bit_sizes=[60, 40, 40, 60],
+        )
+        context.global_scale = 2**40
+        context.generate_galois_keys()
+        self.context = context
+    
     def fwht(self, x):
         """ Fast Walsh-Hadamard Transform. """
         h = 1
@@ -100,7 +119,7 @@ class FederatedModelTrainer(ModelTrainer):
             h *= 2
         return x
 
-    def secure_aggregate_client_side(self, parameters):
+    def secure_aggregate_with_dp(self, parameters):
         """
         Secure aggregation on the client side with differential privacy.
 
@@ -132,6 +151,7 @@ class FederatedModelTrainer(ModelTrainer):
                 raise ValueError("Invalid rotation type. Choose 'hd' or 'dft'.")
 
             rounded_vector = np.round(flattened_vector).astype(int)
+            # Add Gaussian noise to the rounded vector
             noise_vector = np.round(
                 np.random.normal(
                     loc=0,
@@ -140,13 +160,46 @@ class FederatedModelTrainer(ModelTrainer):
                 )
             ).astype(int)
             aggregated_vector = (rounded_vector + noise_vector) % self.modulus
-
+            # TODO: Adaptive zeroing logic goes here
             if self.zeroing:
-                # Adaptive zeroing logic goes here, for now just a placeholder
                 pass
-
             aggregated_vectors.append(aggregated_vector)
         return aggregated_vectors
+
+    def secure_aggregate_with_he(self, parameters):
+        """
+        Secure aggregation on the client side with homomorphic encryption.
+
+        Args:
+            parameters (generator): The model parameters to aggregate.
+        Returns:
+            ts.CKKSVector: The encrypted aggregated vector.
+        """
+        # Create TenSEAL context inside the function
+        context = ts.context(
+            ts.SCHEME_TYPE.CKKS,
+            poly_modulus_degree=8192,
+            coeff_mod_bit_sizes=[60, 40, 40, 60]
+        )
+        context.global_scale = 2**40
+        context.generate_galois_keys()
+        # Extract parameters and convert to flattened numpy arrays
+        params_list = [param.cpu().detach().numpy().flatten() for param in parameters]
+        # Determine the maximum size across all parameters
+        max_size = max(param.size for param in params_list)
+        # Pad each parameter to the maximum size and encrypt
+        encrypted_vectors = []
+        for param in params_list:
+            if param.size < max_size:
+                # Pad with zeros
+                padded_param = np.pad(param, (0, max_size - param.size), 'constant', constant_values=0)
+            else:
+                padded_param = param
+            # Convert to CKKSVector and add to the list
+            encrypted_vector = ts.ckks_vector(context, padded_param.tolist())
+            encrypted_vectors.append(encrypted_vector)
+        
+        return encrypted_vectors
 
     def secure_aggregate_server_side(self, aggregated_vectors):
         """
@@ -176,7 +229,7 @@ class FederatedModelTrainer(ModelTrainer):
 
     def train(self, train_loader, val_loader, model_dir):
         """
-        Trains the model with optional federated learning and differential privacy.
+        Trains the model with optional federated learning, differential privacy, and homomorphic encryption.
 
         Args:
             train_loader (torch.utils.data.DataLoader): The training data loader.
@@ -217,11 +270,25 @@ class FederatedModelTrainer(ModelTrainer):
                     loss.backward()
 
                     if self.use_differential_privacy:
-                        z = self.secure_aggregate_client_side(self.model.parameters())
-                        if z_agg is None:
-                            z_agg = z
+                        dp_params = self.secure_aggregate_with_dp(self.model.parameters())
+                        if self.use_homomorphic_encryption:
+                            # Encrypt the differentially private parameters
+                            he_params = self.secure_aggregate_with_he(dp_params)
+                            if z_agg is None:
+                                z_agg = he_params
+                            else:
+                                z_agg = [he_agg + he for he_agg, he in zip(z_agg, he_params)]
                         else:
-                            z_agg = [(za + z[i]) % self.modulus for i, za in enumerate(z_agg)]
+                            if z_agg is None:
+                                z_agg = dp_params
+                            else:
+                                z_agg = [za + dp for za, dp in zip(z_agg, dp_params)]
+                    elif self.use_homomorphic_encryption:
+                        he_params = self.secure_aggregate_with_he(self.model.parameters())
+                        if z_agg is None:
+                            z_agg = he_params
+                        else:
+                            z_agg = [he_agg + he for he_agg, he in zip(z_agg, he_params)]
                     else:
                         self.optimizer.step()
 
@@ -234,8 +301,17 @@ class FederatedModelTrainer(ModelTrainer):
 
             progress_bar.close()
 
-            if self.use_differential_privacy and z_agg is not None:
-                result = self.secure_aggregate_server_side(z_agg)
+            # Aggregate and update the model parameters at the end of each epoch
+            if z_agg is not None:
+                # Assuming decryption and aggregation are required
+                if self.use_homomorphic_encryption:
+                    # Decrypt the results before updating model parameters
+                    decrypted_results = [self.decrypt_aggregated_updates(vec) for vec in z_agg]
+                    result = decrypted_results
+                else:
+                    result = z_agg
+
+                # Fix mismatched layers by ensuring the same shape
                 state_dict = dict(zip(self.model.state_dict().keys(), result))
                 
                 # Fix: Adjust mismatched layers by ensuring same shape

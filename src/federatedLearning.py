@@ -10,9 +10,6 @@ from tqdm import tqdm
 
 from model import ModelTrainer
 
-# Set multiprocessing start method for compatibility on Windows
-mp.set_start_method("spawn", force=True)
-
 
 class FederatedModelTrainer(ModelTrainer):
     """

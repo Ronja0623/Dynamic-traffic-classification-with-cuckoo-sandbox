@@ -62,11 +62,9 @@ if __name__ == "__main__":
     # classifier.extract_feature()
     # classifier.generate_image()
     # classifier.load_traffic_data()
-    # classifier.train_model()
-    # classifier.train_federated_model(num_clients=2)
-    classifier.train_federated_model(
+    classifier.train_model(
         num_clients=NUM_CLIENTS,
-        use_federated_learning=True,
+        use_federated_learning=False,
         use_differential_privacy=False,
         use_homomorphic_encryption=False,
     )

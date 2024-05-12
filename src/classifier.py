@@ -173,45 +173,7 @@ class Classifier:
     def load_traffic_data(self):
         self.data_description_handler.load_traffic_data()
 
-    def train_model(self):
-        # Set the path
-        timestamp = time.strftime("%Y%m%d_%H%M", time.localtime())
-        model_path = os.path.join(self.MODEL_DIR, timestamp)
-        os.makedirs(model_path, exist_ok=True)
-        metrics_path = os.path.join(self.LOG_DIR, f"metrics_{timestamp}.csv")
-        model_description_path = os.path.join(
-            self.LOG_DIR, f"model_description_{timestamp}.txt"
-        )
-        # Set the model
-        data_processor = DataProcessor(self.FLOW_DATASET_DIR)
-        num_classes = data_processor.get_num_classes()
-        model = EnhancedLeNet(num_classes)
-        # model = BasicCNN(num_classes)
-        # model = CustomVGG16(num_classes)
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        train_loader, val_loader, test_loader = data_processor.get_data_loader(
-            self.BATCH_SIZE, model.image_size
-        )
-        log_manager = LogManager()
-        model_trainer = ModelTrainer(
-            model,
-            log_manager,
-            device,
-            self.LEARNING_RATE,
-            self.EPOCHS,
-        )
-        model_trainer.train(train_loader, val_loader, model_path)
-        model_trainer.test(test_loader)
-        log_manager.save_metrics(metrics_path)
-        log_manager.save_model_description(
-            model_description_path,
-            model,
-            self.BATCH_SIZE,
-            self.LEARNING_RATE,
-            self.EPOCHS,
-        )
-
-    def train_federated_model(
+    def train_model(
         self,
         num_clients,
         use_federated_learning,

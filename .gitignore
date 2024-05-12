@@ -1,6 +1,8 @@
 *.pyc
 .vscode
 
+lib
+
 *dataset*
 
 json

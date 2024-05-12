@@ -1,19 +1,21 @@
 import os
 import time
+
 import torch
 
 from apiCalling import APICalling
 from dataDescriptionHandler import DataDescriptionHandler
+from federatedLearning import FederatedModelTrainer
 from imageGenerator import ImageGenerator
-from pcapProcessor import BytesExtractor, FlowsExtractor, ReportFetcher
 from model import (
     BasicCNN,
     CustomVGG16,
     DataProcessor,
     EnhancedLeNet,
-    LogManger,
+    LogManager,
     ModelTrainer,
 )
+from pcapProcessor import BytesExtractor, FlowsExtractor, ReportFetcher
 
 
 class Classifier:
@@ -92,14 +94,14 @@ class Classifier:
         Make directories for the output.
         Folder list: pcap, flow, bytes, graph
         """
-        os.makedirs(self.PCAP_DIR, exist_ok=True)
+        """os.makedirs(self.PCAP_DIR, exist_ok=True)
         os.makedirs(self.FLOW_DIR, exist_ok=True)
         os.makedirs(self.BYTES_DIR, exist_ok=True)
         os.makedirs(self.GRAPH_DIR, exist_ok=True)
         os.makedirs(self.FLOW_DATASET_DIR, exist_ok=True)
         family_array = self.data_description_handler.get_family_array()
         for family in family_array:
-            os.makedirs(os.path.join(self.FLOW_DATASET_DIR, family), exist_ok=True)
+            os.makedirs(os.path.join(self.FLOW_DATASET_DIR, family), exist_ok=True)"""
         os.makedirs(self.MODEL_DIR, exist_ok=True)
         os.makedirs(self.LOG_DIR, exist_ok=True)
 
@@ -171,7 +173,19 @@ class Classifier:
     def load_traffic_data(self):
         self.data_description_handler.load_traffic_data()
 
-    def train_model(self):
+    def train_model(
+        self,
+        num_clients,
+        use_federated_learning,
+        use_differential_privacy,
+        use_homomorphic_encryption,
+        clipping_threshold=1.0,
+        granularity=None,
+        noise_scale=None,
+        rotation_type="hd",
+        modulus=None,
+        zeroing=True,
+    ):
         # Set the path
         timestamp = time.strftime("%Y%m%d_%H%M", time.localtime())
         model_path = os.path.join(self.MODEL_DIR, timestamp)
@@ -180,24 +194,37 @@ class Classifier:
         model_description_path = os.path.join(
             self.LOG_DIR, f"model_description_{timestamp}.txt"
         )
+
         # Set the model
         data_processor = DataProcessor(self.FLOW_DATASET_DIR)
         num_classes = data_processor.get_num_classes()
-        model = EnhancedLeNet(num_classes)
-        # model = BasicCNN(num_classes)
+        # model = EnhancedLeNet(num_classes)
+        model = BasicCNN(num_classes)
         # model = CustomVGG16(num_classes)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         train_loader, val_loader, test_loader = data_processor.get_data_loader(
             self.BATCH_SIZE, model.image_size
         )
-        log_manager = LogManger()
-        model_trainer = ModelTrainer(
+
+        log_manager = LogManager()
+        model_trainer = FederatedModelTrainer(
             model,
             log_manager,
             device,
             self.LEARNING_RATE,
             self.EPOCHS,
+            num_clients=num_clients,
+            use_federated_learning=use_federated_learning,
+            use_differential_privacy=use_differential_privacy,
+            use_homomorphic_encryption=use_homomorphic_encryption,
+            clipping_threshold=clipping_threshold,
+            granularity=granularity,
+            noise_scale=noise_scale,
+            rotation_type=rotation_type,
+            modulus=modulus,
+            zeroing=zeroing,
         )
+
         model_trainer.train(train_loader, val_loader, model_path)
         model_trainer.test(test_loader)
         log_manager.save_metrics(metrics_path)

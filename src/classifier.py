@@ -5,7 +5,7 @@ import torch
 
 from apiCalling import APICalling
 from dataDescriptionHandler import DataDescriptionHandler
-from federatedLearning import FederatedModelTrainer
+from federatedModelTrainer import FederatedModelTrainer
 from imageGenerator import ImageGenerator
 from model import (
     BasicCNN,

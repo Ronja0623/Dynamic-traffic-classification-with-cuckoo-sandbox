@@ -6,6 +6,7 @@ class DifferentialPrivacy:
     """
     Differential privacy class.
     """
+
     def __init__(
         self,
         granularity=1.0,

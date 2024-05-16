@@ -6,6 +6,7 @@ class HomomorphicEncryption:
     """
     Homomorphic encryption class.
     """
+
     def __init__(self):
         self.context = ts.context(
             ts.SCHEME_TYPE.CKKS,

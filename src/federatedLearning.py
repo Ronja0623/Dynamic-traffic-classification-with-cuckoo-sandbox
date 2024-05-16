@@ -6,6 +6,7 @@ class FederatedLearning:
     """
     Federated learning class.
     """
+
     def __init__(self, num_clients):
         self.num_clients = num_clients
         self.domain = sy.orchestra.launch(

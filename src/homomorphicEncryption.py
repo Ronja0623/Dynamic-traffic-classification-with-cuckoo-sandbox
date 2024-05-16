@@ -3,6 +3,9 @@ import torch
 
 
 class HomomorphicEncryption:
+    """
+    Homomorphic encryption class.
+    """
     def __init__(self):
         self.context = ts.context(
             ts.SCHEME_TYPE.CKKS,
@@ -13,6 +16,9 @@ class HomomorphicEncryption:
         self.context.generate_galois_keys()
 
     def encrypt(self, parameters):
+        """
+        Encrypt the parameters.
+        """
         encrypted_vectors = []
         for param in parameters:
             np_param = param.cpu().detach().numpy().flatten()
@@ -21,6 +27,9 @@ class HomomorphicEncryption:
         return encrypted_vectors
 
     def decrypt(self, encrypted_vectors):
+        """
+        Decrypt the encrypted vectors.
+        """
         return [
             torch.tensor(vec.decrypt(), dtype=torch.float32)
             for vec in encrypted_vectors

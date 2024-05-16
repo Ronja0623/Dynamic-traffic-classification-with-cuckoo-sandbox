@@ -3,10 +3,13 @@ import torch
 
 
 class FederatedLearning:
+    """
+    Federated learning class.
+    """
     def __init__(self, num_clients):
         self.num_clients = num_clients
         self.domain = sy.orchestra.launch(
-            name="test-domain-1", port="auto", dev_mode=True, reset=True
+            name="test-domain", port="auto", dev_mode=True, reset=True
         )
         self.clients = [
             self.domain.login(email=f"client{i+1}@test.com", password="changethis")
@@ -14,6 +17,9 @@ class FederatedLearning:
         ]
 
     def get_train_loaders(self, train_loader):
+        """
+        Get train loaders for each client.
+        """
         data_per_client = len(train_loader.dataset) // self.num_clients
         train_loaders = [
             torch.utils.data.DataLoader(

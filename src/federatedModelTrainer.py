@@ -11,6 +11,9 @@ from model import ModelTrainer
 
 
 class FederatedModelTrainer(ModelTrainer):
+    """
+    Federated model trainer class.
+    """
     def __init__(
         self,
         model,

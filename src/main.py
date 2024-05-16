@@ -28,7 +28,7 @@ if __name__ == "__main__":
     # balance the number of the sample in every family
     NUM_OF_EACH_FAMILY = 10
     # hyperparameters
-    BATCH_SIZE = 4
+    BATCH_SIZE = 32
     LEARNING_RATE = 1e-3
     TRAIN_RATIO = 0.8
     EPOCHS = 1
@@ -65,6 +65,6 @@ if __name__ == "__main__":
     classifier.train_model(
         num_clients=NUM_CLIENTS,
         use_federated_learning=True,
-        use_differential_privacy=True,
-        use_homomorphic_encryption=False,
+        use_differential_privacy=False,
+        use_homomorphic_encryption=True,
     )

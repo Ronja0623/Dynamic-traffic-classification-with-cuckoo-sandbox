@@ -1,6 +1,7 @@
 import tenseal as ts
 import torch
 
+
 class HomomorphicEncryption:
     def __init__(self):
         self.context = ts.context(
@@ -20,4 +21,7 @@ class HomomorphicEncryption:
         return encrypted_vectors
 
     def decrypt(self, encrypted_vectors):
-        return [torch.tensor(vec.decrypt(), dtype=torch.float32) for vec in encrypted_vectors]
+        return [
+            torch.tensor(vec.decrypt(), dtype=torch.float32)
+            for vec in encrypted_vectors
+        ]

@@ -1,18 +1,31 @@
 import numpy as np
 import torch
 
+
 class DifferentialPrivacy:
-    def __init__(self, granularity=1.0, clipping_threshold=1.0, noise_scale=1.0, modulus=2**16, rotation_type="hd", zeroing=False):
+    def __init__(
+        self,
+        granularity=1.0,
+        clipping_threshold=1.0,
+        noise_scale=1.0,
+        modulus=2**16,
+        rotation_type="hd",
+        zeroing=False,
+    ):
         self.granularity = granularity
         self.clipping_threshold = clipping_threshold
         self.noise_scale = noise_scale
         self.modulus = modulus
         self.rotation_type = rotation_type
         self.zeroing = zeroing
-    
+
     def scale_and_clip(self, vector):
         vector_norm = np.linalg.norm(vector, 2)
-        return (1 / self.granularity) * min(1, self.clipping_threshold / vector_norm) * vector
+        return (
+            (1 / self.granularity)
+            * min(1, self.clipping_threshold / vector_norm)
+            * vector
+        )
 
     def pad_to_nearest_power_of_two(self, vector):
         next_power_of_two = int(2 ** np.ceil(np.log2(len(vector))))
@@ -49,10 +62,12 @@ class DifferentialPrivacy:
                 pass
             aggregated_vectors.append(noisy_vector)
         return aggregated_vectors
-    
+
     def adjust_vector(self, aggregated_vector):
-        return (aggregated_vector - self.modulus // 2) % self.modulus - (self.modulus // 2)
-    
+        return (aggregated_vector - self.modulus // 2) % self.modulus - (
+            self.modulus // 2
+        )
+
     def fwht(self, data):
         h = 1
         while h < len(data):

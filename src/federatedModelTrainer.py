@@ -14,6 +14,7 @@ class FederatedModelTrainer(ModelTrainer):
     """
     Federated model trainer class.
     """
+
     def __init__(
         self,
         model,
@@ -60,11 +61,16 @@ class FederatedModelTrainer(ModelTrainer):
             self.context = self.homomorphic_encryption.context
 
     def train(self, train_loader, val_loader, model_dir):
+        """
+        Train the model.
+        """
         if self.use_federated_learning:
+            # Split the training data across the clients for federated learning
             train_loaders = self.federated_learning.get_train_loaders(train_loader)
         else:
             train_loaders = [train_loader]
 
+        # Aggregate of parameters, used when differential privacy or homomorphic encryption is applied
         z_agg = None
 
         for epoch in range(self.epochs):
@@ -81,16 +87,19 @@ class FederatedModelTrainer(ModelTrainer):
                 for batch_idx, (inputs, labels) in enumerate(client_train_loader):
                     inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                    self.optimizer.zero_grad()
-                    outputs = self.model(inputs)
+                    self.optimizer.zero_grad()  # Zero the parameter gradients
+                    outputs = self.model(inputs)  # Forward pass
                     loss = self.criterion(outputs, labels)
                     loss.backward()
 
+                    # TODO: Simplify the logic for handling differential privacy and homomorphic encryption
                     if self.use_differential_privacy:
+                        # Process the parameters with differential privacy
                         dp_params = self.differential_privacy.process_parameters(
                             self.model.parameters()
                         )
                         if self.use_homomorphic_encryption:
+                            # Encrypt the parameters if homomorphic encryption is used
                             he_params = self.homomorphic_encryption.encrypt(dp_params)
                             if z_agg is None:
                                 z_agg = he_params
@@ -99,11 +108,13 @@ class FederatedModelTrainer(ModelTrainer):
                                     he_agg + he for he_agg, he in zip(z_agg, he_params)
                                 ]
                         else:
+                            # Add the differentially private parameters to the aggregate
                             if z_agg is None:
                                 z_agg = dp_params
                             else:
                                 z_agg = [za + dp for za, dp in zip(z_agg, dp_params)]
                     elif self.use_homomorphic_encryption:
+                        # Encrypt the parameters if homomorphic encryption is used
                         he_params = self.homomorphic_encryption.encrypt(
                             self.model.parameters()
                         )
@@ -114,8 +125,10 @@ class FederatedModelTrainer(ModelTrainer):
                                 he_agg + he for he_agg, he in zip(z_agg, he_params)
                             ]
                     else:
+                        # Update the model parameters directly
                         self.optimizer.step()
 
+                    # Record the training loss
                     train_losses.append(loss.item())
                     _, preds = torch.max(outputs, 1)
                     all_preds.extend(preds.cpu().numpy())
@@ -127,6 +140,7 @@ class FederatedModelTrainer(ModelTrainer):
 
             progress_bar.close()
 
+            # Aggregate the parameters if differential privacy or homomorphic encryption is applied
             if self.use_differential_privacy and z_agg is not None:
                 if self.use_homomorphic_encryption:
                     decrypted_results = [
@@ -136,17 +150,20 @@ class FederatedModelTrainer(ModelTrainer):
                 else:
                     result = z_agg
 
+                # Update the model parameters with the aggregated parameters
                 state_dict = dict(zip(self.model.state_dict().keys(), result))
                 current_state_dict = self.model.state_dict()
                 for key, param in state_dict.items():
                     if param.shape == current_state_dict[key].shape:
                         current_state_dict[key] = param
-
+                # Load the updated model parameters
                 self.model.load_state_dict(current_state_dict)
 
+            # Save the model
             model_path = os.path.join(model_dir, f"model_epoch{epoch + 1}.pth")
             torch.save(self.model.state_dict(), model_path)
 
+            # Record the training metrics
             train_accuracy = accuracy_score(all_labels, all_preds)
             train_precision = precision_score(
                 all_labels, all_preds, average="macro", zero_division=0
@@ -165,5 +182,5 @@ class FederatedModelTrainer(ModelTrainer):
                 train_f1,
                 "train",
             )
-
+            # Evaluate the model on the validation set
             self.evaluate(val_loader, epoch)

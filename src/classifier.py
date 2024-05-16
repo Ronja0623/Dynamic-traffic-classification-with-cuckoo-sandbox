@@ -180,11 +180,11 @@ class Classifier:
         use_differential_privacy,
         use_homomorphic_encryption,
         clipping_threshold=1.0,
-        granularity=None,
-        noise_scale=None,
+        granularity=1.0,
+        noise_scale=1.0,
         rotation_type="hd",
-        modulus=None,
-        zeroing=True,
+        modulus=2**16,
+        zeroing=False,
     ):
         # Set the path
         timestamp = time.strftime("%Y%m%d_%H%M", time.localtime())

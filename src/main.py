@@ -64,7 +64,7 @@ if __name__ == "__main__":
     # classifier.load_traffic_data()
     classifier.train_model(
         num_clients=NUM_CLIENTS,
-        use_federated_learning=False,
-        use_differential_privacy=False,
+        use_federated_learning=True,
+        use_differential_privacy=True,
         use_homomorphic_encryption=False,
     )

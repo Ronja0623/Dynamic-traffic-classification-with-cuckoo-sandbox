@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import torch
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from tqdm import tqdm
@@ -154,6 +155,8 @@ class FederatedModelTrainer(ModelTrainer):
                 state_dict = dict(zip(self.model.state_dict().keys(), result))
                 current_state_dict = self.model.state_dict()
                 for key, param in state_dict.items():
+                    if isinstance(param, np.ndarray):
+                        param = torch.from_numpy(param)
                     if param.shape == current_state_dict[key].shape:
                         current_state_dict[key] = param
                 # Load the updated model parameters

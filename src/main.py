@@ -13,7 +13,7 @@ if __name__ == "__main__":
     FLOW_DIR = "flow"
     BYTES_DIR = "bytes"
     GRAPH_DIR = "graph"
-    FLOW_DATASET_DIR = r"D:\Backup\Dataset\Flow\flow_dataset"
+    FLOW_DATASET_DIR = r"D:\Backup\Dataset\Flow\flow_dataset - copy"
     # output path: malware classification
     MODEL_DIR = "model"
     LOG_DIR = "log"
@@ -65,6 +65,6 @@ if __name__ == "__main__":
     classifier.train_model(
         num_clients=NUM_CLIENTS,
         use_federated_learning=True,
-        use_differential_privacy=False,
-        use_homomorphic_encryption=True,
+        use_differential_privacy=True,
+        use_homomorphic_encryption=False,
     )

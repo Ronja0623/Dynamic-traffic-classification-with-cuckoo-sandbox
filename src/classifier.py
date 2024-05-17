@@ -198,8 +198,8 @@ class Classifier:
         # Set the model
         data_processor = DataProcessor(self.FLOW_DATASET_DIR)
         num_classes = data_processor.get_num_classes()
-        # model = EnhancedLeNet(num_classes)
-        model = BasicCNN(num_classes)
+        model = EnhancedLeNet(num_classes)
+        # model = BasicCNN(num_classes)
         # model = CustomVGG16(num_classes)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         train_loader, val_loader, test_loader = data_processor.get_data_loader(

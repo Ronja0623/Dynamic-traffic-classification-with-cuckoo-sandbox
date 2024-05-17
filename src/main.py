@@ -31,7 +31,7 @@ if __name__ == "__main__":
     BATCH_SIZE = 32
     LEARNING_RATE = 1e-3
     TRAIN_RATIO = 0.8
-    EPOCHS = 1
+    EPOCHS = 2
     RANDOM_STATE = 42
     # Federated Learning
     NUM_CLIENTS = 3

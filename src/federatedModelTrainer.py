@@ -156,7 +156,7 @@ class FederatedModelTrainer(ModelTrainer):
                 current_state_dict = self.model.state_dict()
                 for key, param in state_dict.items():
                     if isinstance(param, np.ndarray):
-                        param = torch.from_numpy(param)
+                        param = torch.from_numpy(param).float()  # Ensure parameter is converted to Tensor
                     if param.shape == current_state_dict[key].shape:
                         current_state_dict[key] = param
                 # Load the updated model parameters
